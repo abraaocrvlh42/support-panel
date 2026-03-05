@@ -1,242 +1,365 @@
 # 🎫 Painel de Chamados de Suporte
 
-Interface interna para gestão de chamados de suporte para pequenos comércios, construída com **React + Vite + TypeScript**.
+Interface interna para gestão de chamados de suporte para pequenos comércios.
+
+| Camada | Stack |
+|---|---|
+| **Frontend** | React 18 · Vite · TypeScript · CSS Modules |
+| **Backend**  | Node.js · Express · TypeScript · SQLite (`sql.js`) |
 
 ---
 
 ## 📋 Índice
 
+- [Visão geral](#-visão-geral)
+- [Estrutura do repositório](#-estrutura-do-repositório)
 - [Como criar o projeto do zero com Vite](#-como-criar-o-projeto-do-zero-com-vite)
-- [Como rodar (modo mock/local)](#-como-rodar-modmocklocal)
+- [Como rodar](#-como-rodar)
+  - [Modo mock](#modo-mock-só-frontend)
+  - [Modo API](#modo-api-frontend--backend)
+- [Endpoints da API](#-endpoints-da-api)
 - [Estrutura de pastas](#-estrutura-de-pastas)
-- [Arquitetura e decisões técnicas](#-arquitetura-e-decisões-técnicas)
-- [Funcionalidades implementadas](#-funcionalidades-implementadas)
-- [Stack utilizada](#-stack-utilizada)
+- [Arquitetura](#-arquitetura)
+- [Funcionalidades](#-funcionalidades)
+- [Stack](#-stack)
+
+---
+
+## 🖥 Visão geral
+
+O painel permite que times internos de suporte:
+
+- Visualizem todos os chamados abertos, em andamento e resolvidos
+- Criem novos chamados com título, cliente, descrição e prioridade
+- Atualizem o status de qualquer chamado diretamente pela interface
+- Filtrem por status e busquem por título ou nome do cliente
+
+A aplicação tem **dois modos de operação**:
+
+| Modo | Quando usar | Persistência |
+|---|---|---|
+| **Mock** | Desenvolvimento de UI sem backend | Em memória (reseta ao recarregar) |
+| **API**  | Uso completo com dados reais | SQLite em arquivo (`data/tickets.db`) |
+
+---
+
+## 📁 Estrutura do repositório
+
+```
+support-panel/
+├── front-end/    # React + Vite + TypeScript
+└── back-end/     # Node.js + Express + TypeScript
+```
 
 ---
 
 ## 🚀 Como criar o projeto do zero com Vite
 
-Se você quiser recriar esse projeto do zero utilizando Vite + React + TypeScript, siga os passos abaixo:
-
-### 1. Criar o projeto com Vite
+Se quiser recriar o frontend do zero:
 
 ```bash
-npm create vite@latest support-panel -- --template react-ts
-```
-
-> O comando `npm create vite@latest` usa o scaffolding oficial do Vite.
-> A flag `--template react-ts` já configura React + TypeScript automaticamente.
-
-### 2. Entrar na pasta e instalar as dependências
-
-```bash
-cd support-panel
+npm create vite@latest front-end -- --template react-ts
+cd front-end
 npm install
-```
-
-### 3. Rodar o servidor de desenvolvimento
-
-```bash
 npm run dev
 ```
 
-O projeto estará disponível em `http://localhost:5173`.
-
-### 4. Outros comandos úteis
-
-| Comando           | O que faz                              |
-|-------------------|----------------------------------------|
-| `npm run dev`     | Inicia servidor de desenvolvimento     |
-| `npm run build`   | Gera build de produção em `/dist`      |
-| `npm run preview` | Visualiza o build de produção localmente |
+> A flag `--template react-ts` configura React + TypeScript automaticamente.
 
 ---
 
-## ▶️ Como rodar (modo mock/local)
+## ▶️ Como rodar
 
-Este projeto funciona **100% sem backend**. Os dados são simulados em memória com delays artificiais para imitar latência de API real.
+### Pré-requisitos
+
+- **Node.js 18+** → [nodejs.org](https://nodejs.org)
+- **npm** (já incluído no Node.js)
+
+---
+
+### Modo mock (só frontend)
+
+Ideal para trabalhar na UI sem precisar do backend rodando.
 
 ```bash
-# 1. Clone ou copie os arquivos do projeto
-# 2. Instale as dependências
+cd front-end
 npm install
-
-# 3. Rode em modo desenvolvimento
 npm run dev
 ```
 
-Acesse `http://localhost:5173` no navegador.
+Acesse **http://localhost:5173**
 
-> **Nota:** Os dados são resetados ao recarregar a página — isso é esperado no modo mock.
+> Os dados são simulados em memória com delay artificial. Resetam ao recarregar — comportamento esperado nesse modo.
+
+---
+
+### Modo API (frontend + backend)
+
+Dados reais persistidos em SQLite. Abra dois terminais.
+
+**Terminal 1 — Backend:**
+
+```bash
+cd back-end
+npm install
+npm run dev
+```
+
+Confirme que está rodando em `http://localhost:3000/health`:
+```json
+{ "status": "ok", "timestamp": "..." }
+```
+
+**Terminal 2 — Frontend:**
+
+```bash
+cd front-end
+npm install
+npm run dev
+```
+
+Acesse **http://localhost:5173**
+
+> O frontend aponta para `http://localhost:3000` via constante `API_URL` no arquivo
+> `front-end/src/services/ticketService.ts`. Para trocar a URL, edite essa constante.
+
+---
+
+### Scripts disponíveis
+
+**Frontend:**
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento com HMR |
+| `npm run build` | Build de produção em `/dist` |
+| `npm run preview` | Visualiza o build localmente |
+
+**Backend:**
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Desenvolvimento com hot-reload (`tsx watch`) |
+| `npm run build` | Compila TypeScript → `dist/` |
+| `npm start` | Roda o build compilado |
+
+---
+
+## 📡 Endpoints da API
+
+Base URL: `http://localhost:3000`
+
+### `GET /tickets`
+
+Retorna todos os chamados ordenados por data de criação (mais recente primeiro).
+
+**Response `200`:**
+```json
+[
+  {
+    "id": "001",
+    "title": "Sistema de PDV travando na abertura",
+    "client": "Mercearia São João",
+    "description": "O sistema trava toda vez que tentamos abrir caixa.",
+    "status": "open",
+    "priority": "high",
+    "createdAt": "2025-03-04T08:30:00Z"
+  }
+]
+```
+
+---
+
+### `POST /tickets`
+
+Cria um novo chamado. Status inicial é sempre `open`.
+
+**Body:**
+```json
+{
+  "title": "Título do problema",
+  "client": "Nome do cliente",
+  "description": "Descrição detalhada do problema",
+  "priority": "low" | "medium" | "high"
+}
+```
+
+**Response `201`:** chamado criado completo.
+
+**Response `400`:**
+```json
+{
+  "error": "Dados inválidos.",
+  "fields": {
+    "title": "Título é obrigatório."
+  }
+}
+```
+
+---
+
+### `PATCH /tickets/:id/status`
+
+Atualiza o status de um chamado existente.
+
+**Body:**
+```json
+{ "status": "open" | "in_progress" | "resolved" }
+```
+
+**Response `200`:** chamado atualizado completo.
+
+**Response `404`:**
+```json
+{ "error": "Chamado #999 não encontrado." }
+```
+
+---
+
+### `GET /health`
+
+**Response `200`:**
+```json
+{ "status": "ok", "timestamp": "2025-03-04T10:00:00.000Z" }
+```
 
 ---
 
 ## 📁 Estrutura de pastas
 
+### Frontend (`front-end/`)
+
 ```
-support-panel/
-├── index.html                      # Entry point HTML
-├── vite.config.ts                  # Configuração do Vite (alias @/)
-├── tsconfig.json                   # Configuração TypeScript raiz
-├── tsconfig.app.json               # Config TS para o código da aplicação
-├── tsconfig.node.json              # Config TS para arquivos de build (vite.config)
-├── package.json
+front-end/
+├── index.html
+├── vite.config.ts                  # Alias @/ → src/
+├── tsconfig.app.json
 └── src/
-    ├── main.tsx                    # Ponto de entrada React (createRoot)
-    ├── App.tsx                     # Componente raiz — orquestra toda a aplicação
-    ├── App.module.css              # Estilos do layout principal
-    ├── vite-env.d.ts               # Tipagem de variáveis de ambiente Vite
-    │
+    ├── main.tsx                    # Ponto de entrada React
+    ├── App.tsx                     # Componente raiz
+    ├── App.module.css
     ├── styles/
-    │   └── global.css              # Reset, design tokens (CSS variables), base styles
-    │
+    │   └── global.css              # Design tokens (CSS variables) e reset
     ├── types/
-    │   └── index.ts                # Tipos TypeScript: Ticket, TicketStatus, FilterState…
-    │
+    │   └── index.ts                # Ticket, TicketStatus, FilterState…
     ├── data/
-    │   ├── mockTickets.ts          # Dados iniciais (seed) do mock
-    │   └── constants.ts            # Labels e opções de filtro reutilizáveis
-    │
+    │   ├── mockTickets.ts          # Seed para o modo mock
+    │   └── constants.ts            # Labels e opções de filtro
     ├── services/
-    │   └── ticketService.ts        # Camada de dados (mock in-memory).
-    │                               # Troque por fetch('/api/...') para conectar ao backend.
-    │
+    │   └── ticketService.ts        # Camada de dados — mock ou API real
     ├── hooks/
-    │   ├── useTickets.ts           # Hook principal: fetch, create, updateStatus, filtros
-    │   └── useToast.ts             # Hook de notificações toast
-    │
+    │   ├── useTickets.ts           # Estado principal: fetch, create, updateStatus
+    │   └── useToast.ts             # Notificações toast
     ├── utils/
-    │   └── date.ts                 # Helpers de formatação de data/hora
-    │
+    │   └── date.ts                 # Formatação de data/hora
     └── components/
         ├── layout/
-        │   ├── AppHeader.tsx       # Cabeçalho com logo e contadores de status
-        │   ├── AppHeader.module.css
-        │   └── index.ts            # Barrel export
-        │
-        ├── ui/                     # Componentes de UI genéricos/reutilizáveis
-        │   ├── StatusBadge.tsx     # Badge colorido para status do chamado
-        │   ├── PriorityBadge.tsx   # Badge colorido para prioridade
-        │   ├── Badge.module.css    # Estilos compartilhados dos badges
-        │   ├── Toast.tsx           # Container de notificações toast
-        │   ├── Toast.module.css
-        │   └── index.ts            # Barrel export
-        │
-        └── tickets/                # Componentes específicos do domínio de chamados
-            ├── TicketFilters.tsx   # Barra de busca + filtros de status + botão criar
-            ├── TicketFilters.module.css
-            ├── TicketList.tsx      # Lista de chamados + estados (loading, vazio, erro)
-            ├── TicketList.module.css
-            ├── TicketRow.tsx       # Linha individual de chamado (com select de status)
-            ├── TicketRow.module.css
-            ├── TicketDetail.tsx    # Painel de detalhes expandido ao selecionar linha
-            ├── TicketDetail.module.css
-            ├── CreateTicketModal.tsx   # Modal de criação com validação de formulário
-            ├── CreateTicketModal.module.css
-            ├── ErrorBanner.tsx     # Banner de erro com botão de retry
-            ├── ErrorBanner.module.css
-            └── index.ts            # Barrel export
+        │   └── AppHeader           # Cabeçalho com contadores por status
+        ├── ui/                     # Componentes genéricos reutilizáveis
+        │   ├── StatusBadge
+        │   ├── PriorityBadge
+        │   └── Toast
+        └── tickets/                # Componentes do domínio
+            ├── TicketFilters       # Busca + filtros + botão criar
+            ├── TicketList          # Lista + estados (loading, vazio, erro)
+            ├── TicketRow           # Linha com select de status inline
+            ├── TicketDetail        # Painel de detalhes
+            ├── CreateTicketModal   # Modal de criação com validação
+            └── ErrorBanner         # Banner de erro com retry
+```
+
+### Backend (`back-end/`)
+
+```
+back-end/
+├── tsconfig.json
+├── package.json
+├── data/
+│   └── tickets.db                  # Criado automaticamente na 1ª execução
+└── src/
+    ├── server.ts                   # Express, middlewares, porta 3000
+    ├── types/
+    │   └── index.ts                # Ticket, TicketStatus, TicketPriority…
+    ├── db/
+    │   └── database.ts             # Conexão SQLite, migration, seed, helpers
+    ├── routes/
+    │   └── tickets.ts              # GET, POST, PATCH
+    ├── controllers/
+    │   └── ticketsController.ts    # Validação, lógica, queries SQL
+    └── middlewares/
+        └── errorHandler.ts         # Erros globais + 404
 ```
 
 ---
 
-## 🏗 Arquitetura e decisões técnicas
+## 🏗 Arquitetura
 
-### Separação em camadas
+### Camada de dados isolada
 
-O projeto segue uma separação clara de responsabilidades:
-
-```
-UI (components)
-    ↕ props / callbacks
-Lógica de estado (hooks)
-    ↕ chamadas assíncronas
-Camada de dados (services)
-    ↕ (mock in-memory ou fetch real)
-Fonte de dados (mock / API)
-```
-
-**Por quê essa separação importa:**
-Para trocar o mock por uma API real, basta editar apenas `src/services/ticketService.ts` — nenhum componente precisa mudar.
-
-### `ticketService.ts` — Camada de dados isolada
+O `ticketService.ts` é a única parte do frontend que sabe de onde os dados vêm.
+Componentes e hooks consomem sempre a mesma interface:
 
 ```ts
-// Mock atual:
-async getAll(): Promise<Ticket[]> {
-  await delay();
-  return [...store];
-}
-
-// Para usar API real, troque por:
-async getAll(): Promise<Ticket[]> {
-  const res = await fetch('/api/tickets');
-  if (!res.ok) throw new Error('Falha ao carregar chamados.');
-  return res.json();
-}
+ticketService.getAll()
+ticketService.create(payload)
+ticketService.updateStatus(id, status)
 ```
 
-### `useTickets.ts` — Hook de estado principal
+Para trocar mock por API real, apenas o `ticketService.ts` muda — nenhum componente é afetado.
 
-Concentra toda a lógica de estado da aplicação:
-- Busca inicial dos dados (`useEffect`)
-- Criação otimista de chamados (adiciona localmente sem re-fetch)
-- Atualização de status (atualiza item específico no array)
-- Filtragem derivada (computed, sem estado extra)
-- Contadores por status (computed)
+### Fluxo de dados
 
-### CSS Modules
+```
+Componente React
+      ↕  props / callbacks
+useTickets (hook)
+      ↕  chamadas async
+ticketService
+      ↕
+  mockAdapter            apiAdapter
+  (in-memory)            fetch() → Express → SQLite
+```
 
-Cada componente tem seu próprio `.module.css`. Isso garante:
-- Escopo local (sem conflitos de classe)
-- Co-localização (CSS junto do componente)
-- Zero dependências de runtime
+### Separação de camadas no backend
 
-Os **design tokens** (cores, tipografia, espaçamentos) ficam em `global.css` via **CSS custom properties**, acessíveis em todos os modules.
-
-### TypeScript estrito
-
-`tsconfig.app.json` habilita `strict: true`, `noUnusedLocals`, `noUnusedParameters`. Todos os componentes e funções são tipados, incluindo props, retornos de hooks e payloads de serviço.
-
-### Alias `@/`
-
-`vite.config.ts` mapeia `@/` para `src/`. Isso permite imports limpos:
-```ts
-import { useTickets } from '@/hooks/useTickets';
-// ao invés de:
-import { useTickets } from '../../../hooks/useTickets';
+```
+server.ts       →  Express, middlewares globais, start
+routes/         →  define endpoints, delega para controllers
+controllers/    →  validação, lógica de negócio, queries SQL
+db/             →  conexão singleton, migration, seed, helpers tipados
+middlewares/    →  errorHandler global, 404
 ```
 
 ---
 
-## ✅ Funcionalidades implementadas
+## ✅ Funcionalidades
 
 | Feature | Detalhes |
 |---|---|
-| **Listagem** | id, título, cliente, status, prioridade, data de criação |
-| **Filtro por status** | Tabs: Todos / Aberto / Em andamento / Resolvido |
-| **Busca por texto** | Filtra por título ou nome do cliente em tempo real |
-| **Criar chamado** | Modal com validação: título, cliente, descrição (obrigatórios), prioridade |
-| **Atualizar status** | Select inline em cada linha, persiste no store em memória |
-| **Painel de detalhes** | Expande ao clicar em uma linha, mostra descrição completa |
-| **Estado de loading** | Spinner animado durante fetch |
-| **Estado vazio** | Mensagem contextual (sem dados vs. sem resultados de busca) |
-| **Estado de erro** | Banner vermelho com mensagem + botão "Tentar novamente" |
-| **Responsividade** | Desktop: tabela com colunas. Mobile: cards empilhados |
-| **Toasts** | Feedback de ações (criar chamado, alterar status) |
-| **Acessibilidade** | `aria-label`, `role`, `aria-pressed`, `aria-live`, navegação por teclado, `focus-visible` |
+| Listagem | id, título, cliente, status, prioridade, data de criação |
+| Filtro por status | Todos / Aberto / Em andamento / Resolvido |
+| Busca por texto | Título ou nome do cliente em tempo real |
+| Criar chamado | Modal com validação dos campos obrigatórios |
+| Atualizar status | Select inline por linha, persiste imediatamente |
+| Painel de detalhes | Expande ao clicar em uma linha |
+| Loading | Spinner animado durante requisições |
+| Estado vazio | Mensagem contextual (sem dados vs. sem resultados) |
+| Estado de erro | Banner com mensagem amigável + retry |
+| Responsividade | Desktop: tabela · Mobile: cards empilhados |
+| Toasts | Feedback ao criar chamado e alterar status |
+| Acessibilidade | `aria-label`, `role`, `aria-live`, navegação por teclado |
 
 ---
 
-## 🛠 Stack utilizada
+## 🛠 Stack
 
-| Tecnologia | Versão | Por quê |
-|---|---|---|
-| **React** | 18 | Requisito do desafio. Hooks modernos sem class components. |
-| **Vite** | 6 | Build ultra-rápido, HMR nativo, suporte TypeScript out-of-the-box |
-| **TypeScript** | 5.6 | Tipagem estrita, IntelliSense, segurança em refatorações |
-| **CSS Modules** | nativo Vite | Escopo local, zero runtime overhead, sem dependências extras |
-| **IBM Plex Mono + Sans** | Google Fonts | Estética industrial/técnica adequada a painel interno de suporte |
-
-**Sem dependências de UI externas** (sem Chakra, MUI, Radix, etc.) — escolha intencional para demonstrar domínio de CSS e composição de componentes.
+| Tecnologia | Por quê |
+|---|---|
+| **React 18** | Requisito do desafio. Hooks modernos, sem class components |
+| **Vite** | Build rápido, HMR nativo, suporte TypeScript sem configuração extra |
+| **TypeScript** | Tipagem estrita em todo o projeto — frontend e backend |
+| **CSS Modules** | Escopo local por componente, zero runtime, sem dependências de estilo |
+| **IBM Plex Mono + Sans** | Estética industrial adequada a um painel interno de suporte |
+| **Express** | Minimalista, maduro, ótima tipagem com `@types/express` |
+| **sql.js** | SQLite em WebAssembly — sem compilação nativa, funciona em qualquer OS |
+| **tsx** | Executa TypeScript diretamente no dev, sem step de build intermediário |
