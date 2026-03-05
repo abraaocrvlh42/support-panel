@@ -1,0 +1,53 @@
+.wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Table header */
+.tableHeader {
+  display: grid;
+  grid-template-columns: 60px 1fr 180px 130px 100px 145px 155px;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.th {
+  padding: 10px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+
+/* States */
+.stateContainer {
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.stateIcon  { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.stateTitle { font-family: var(--font-mono); font-size: 14px; color: var(--text-muted); margin-bottom: 6px; }
+.stateDesc  { font-size: 13px; color: var(--text-dim); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Hide table header on mobile */
+@media (max-width: 900px) {
+  .tableHeader { display: none; }
+}

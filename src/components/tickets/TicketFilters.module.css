@@ -1,0 +1,100 @@
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+/* Search */
+.searchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.searchInput:focus          { border-color: var(--border-hover); }
+.searchInput::placeholder   { color: var(--text-dim); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.tab:hover   { color: var(--text); }
+.tabActive   { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+
+/* Actions */
+.actions {
+  margin-left: auto;
+}
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--accent);
+  color: #0a1a10;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btnPrimary:hover  { filter: brightness(1.1); transform: translateY(-1px); }
+.btnPrimary:active { transform: translateY(0); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .tabs    { order: 3; width: 100%; }
+  .tab     { flex: 1; text-align: center; }
+  .actions { margin-left: 0; }
+}
+
+@media (max-width: 600px) {
+  .controls { flex-wrap: wrap; }
+}

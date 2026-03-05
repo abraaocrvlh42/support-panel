@@ -1,0 +1,90 @@
+.row {
+  display: grid;
+  grid-template-columns: 60px 1fr 180px 130px 100px 145px 155px;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+  align-items: center;
+}
+
+.row:last-child    { border-bottom: none; }
+.row:hover         { background: var(--surface-2); }
+.rowSelected       { background: var(--surface-3) !important; }
+
+.cell {
+  padding: 14px 8px;
+  font-size: 13px;
+}
+
+.cellId {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.titleText {
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cellClient {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellDate {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time {
+  color: var(--text-dim);
+}
+
+/* Status select */
+.statusSelect {
+  appearance: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 24px 4px 8px;
+  cursor: pointer;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23606080' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  transition: border-color 0.15s;
+  max-width: 130px;
+}
+.statusSelect:hover    { border-color: var(--border-hover); }
+.statusSelect:focus    { border-color: var(--accent); }
+.statusSelect:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Responsive: collapse to card layout */
+@media (max-width: 900px) {
+  .row {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .cell        { padding: 0; }
+  .cellId      { order: -1; }
+  .statusSelect { max-width: 100%; width: 100%; }
+}
