@@ -1,6 +1,6 @@
 import path from 'path';
 import fs   from 'fs';
-import initSqlJs, { Database } from 'sql.js';
+import initSqlJs, { Database, SqlValue } from 'sql.js';
 
 const DB_PATH = path.join(__dirname, '../../data/tickets.db');
 
@@ -79,7 +79,7 @@ export async function getDb(): Promise<AppDatabase> {
 // ── Typed query helpers ────────────────────────────────────────────────────────
 
 /** Executa SELECT e retorna array de objetos tipados. */
-export function dbAll<T>(db: Database, sql: string, params: unknown[] = []): T[] {
+export function dbAll<T>(db: Database, sql: string, params: SqlValue[] = []): T[] {
   const result = db.exec(sql, params);
   if (!result.length) return [];
   const { columns, values } = result[0];
@@ -89,12 +89,12 @@ export function dbAll<T>(db: Database, sql: string, params: unknown[] = []): T[]
 }
 
 /** Executa SELECT e retorna apenas o primeiro resultado. */
-export function dbGet<T>(db: Database, sql: string, params: unknown[] = []): T | null {
+export function dbGet<T>(db: Database, sql: string, params: SqlValue[] = []): T | null {
   return dbAll<T>(db, sql, params)[0] ?? null;
 }
 
 /** Executa INSERT / UPDATE / DELETE e persiste no disco. */
-export function dbRun(db: AppDatabase, sql: string, params: unknown[] = []): void {
+export function dbRun(db: AppDatabase, sql: string, params: SqlValue[] = []): void {
   db.run(sql, params);
   db.save();
 }
