@@ -5,7 +5,10 @@ Interface interna para gestão de chamados de suporte para pequenos comércios.
 | Camada | Stack |
 |---|---|
 | **Frontend** | React 18 · Vite · TypeScript · CSS Modules |
-| **Backend**  | Node.js · Express · TypeScript · SQLite (`sql.js`) |
+| **Backend**  | Node.js · Express · TypeScript · PostgreSQL |
+
+🔗 **Demo:** https://support-panel-sigma.vercel.app
+🔗 **API:** https://support-panel-m470.onrender.com
 
 ---
 
@@ -14,14 +17,14 @@ Interface interna para gestão de chamados de suporte para pequenos comércios.
 - [Visão geral](#-visão-geral)
 - [Estrutura do repositório](#-estrutura-do-repositório)
 - [Como criar o projeto do zero com Vite](#-como-criar-o-projeto-do-zero-com-vite)
-- [Como rodar](#-como-rodar)
-  - [Modo mock](#modo-mock-só-frontend)
-  - [Modo API](#modo-api-frontend--backend)
+- [Como rodar localmente](#-como-rodar-localmente)
+- [Variáveis de ambiente](#-variáveis-de-ambiente)
 - [Endpoints da API](#-endpoints-da-api)
 - [Estrutura de pastas](#-estrutura-de-pastas)
 - [Arquitetura](#-arquitetura)
 - [Funcionalidades](#-funcionalidades)
 - [Stack](#-stack)
+- [Deploy](#-deploy)
 
 ---
 
@@ -32,6 +35,7 @@ O painel permite que times internos de suporte:
 - Visualizem todos os chamados abertos, em andamento e resolvidos
 - Criem novos chamados com título, cliente, descrição e prioridade
 - Atualizem o status de qualquer chamado diretamente pela interface
+- Deletem chamados existentes
 - Filtrem por status e busquem por título ou nome do cliente
 
 A aplicação tem **dois modos de operação**:
@@ -39,7 +43,7 @@ A aplicação tem **dois modos de operação**:
 | Modo | Quando usar | Persistência |
 |---|---|---|
 | **Mock** | Desenvolvimento de UI sem backend | Em memória (reseta ao recarregar) |
-| **API**  | Uso completo com dados reais | SQLite em arquivo (`data/tickets.db`) |
+| **API**  | Uso completo com dados reais | PostgreSQL |
 
 ---
 
@@ -47,15 +51,16 @@ A aplicação tem **dois modos de operação**:
 
 ```
 support-panel/
+├── README.md
+├── DECISOES.md
+├── .gitignore
 ├── front-end/    # React + Vite + TypeScript
-└── back-end/     # Node.js + Express + TypeScript
+└── back-end/     # Node.js + Express + TypeScript + PostgreSQL
 ```
 
 ---
 
 ## 🚀 Como criar o projeto do zero com Vite
-
-Se quiser recriar o frontend do zero:
 
 ```bash
 npm create vite@latest front-end -- --template react-ts
@@ -68,18 +73,19 @@ npm run dev
 
 ---
 
-## ▶️ Como rodar
+## ▶️ Como rodar localmente
 
 ### Pré-requisitos
 
 - **Node.js 18+** → [nodejs.org](https://nodejs.org)
 - **npm** (já incluído no Node.js)
+- **PostgreSQL** instalado localmente (apenas para o modo API)
 
 ---
 
 ### Modo mock (só frontend)
 
-Ideal para trabalhar na UI sem precisar do backend rodando.
+Ideal para trabalhar na UI sem precisar do backend.
 
 ```bash
 cd front-end
@@ -95,8 +101,6 @@ Acesse **http://localhost:5173**
 
 ### Modo API (frontend + backend)
 
-Dados reais persistidos em SQLite. Abra dois terminais.
-
 **Terminal 1 — Backend:**
 
 ```bash
@@ -105,7 +109,7 @@ npm install
 npm run dev
 ```
 
-Confirme que está rodando em `http://localhost:3000/health`:
+Confirme em `http://localhost:3000/health`:
 ```json
 { "status": "ok", "timestamp": "..." }
 ```
@@ -119,9 +123,6 @@ npm run dev
 ```
 
 Acesse **http://localhost:5173**
-
-> O frontend aponta para `http://localhost:3000` via constante `API_URL` no arquivo
-> `front-end/src/services/ticketService.ts`. Para trocar a URL, edite essa constante.
 
 ---
 
@@ -142,6 +143,26 @@ Acesse **http://localhost:5173**
 | `npm run dev` | Desenvolvimento com hot-reload (`tsx watch`) |
 | `npm run build` | Compila TypeScript → `dist/` |
 | `npm start` | Roda o build compilado |
+
+---
+
+## 🔑 Variáveis de ambiente
+
+### Backend — `back-end/.env`
+
+```env
+DATABASE_URL=postgresql://user:senha@localhost:5432/support_panel
+FRONTEND_URL=http://localhost:5173
+PORT=3000
+```
+
+### Frontend — `front-end/.env`
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+> Sem o `.env` no frontend, o app roda automaticamente em modo mock.
 
 ---
 
@@ -179,7 +200,7 @@ Cria um novo chamado. Status inicial é sempre `open`.
 {
   "title": "Título do problema",
   "client": "Nome do cliente",
-  "description": "Descrição detalhada do problema",
+  "description": "Descrição detalhada",
   "priority": "low" | "medium" | "high"
 }
 ```
@@ -190,9 +211,7 @@ Cria um novo chamado. Status inicial é sempre `open`.
 ```json
 {
   "error": "Dados inválidos.",
-  "fields": {
-    "title": "Título é obrigatório."
-  }
+  "fields": { "title": "Título é obrigatório." }
 }
 ```
 
@@ -200,7 +219,7 @@ Cria um novo chamado. Status inicial é sempre `open`.
 
 ### `PATCH /tickets/:id/status`
 
-Atualiza o status de um chamado existente.
+Atualiza o status de um chamado.
 
 **Body:**
 ```json
@@ -208,6 +227,19 @@ Atualiza o status de um chamado existente.
 ```
 
 **Response `200`:** chamado atualizado completo.
+
+**Response `404`:**
+```json
+{ "error": "Chamado #999 não encontrado." }
+```
+
+---
+
+### `DELETE /tickets/:id`
+
+Deleta um chamado permanentemente.
+
+**Response `204`:** sem corpo.
 
 **Response `404`:**
 ```json
@@ -234,6 +266,7 @@ front-end/
 ├── index.html
 ├── vite.config.ts                  # Alias @/ → src/
 ├── tsconfig.app.json
+├── .env                            # VITE_API_URL (criar manualmente)
 └── src/
     ├── main.tsx                    # Ponto de entrada React
     ├── App.tsx                     # Componente raiz
@@ -248,7 +281,7 @@ front-end/
     ├── services/
     │   └── ticketService.ts        # Camada de dados — mock ou API real
     ├── hooks/
-    │   ├── useTickets.ts           # Estado principal: fetch, create, updateStatus
+    │   ├── useTickets.ts           # Estado: fetch, create, update, delete
     │   └── useToast.ts             # Notificações toast
     ├── utils/
     │   └── date.ts                 # Formatação de data/hora
@@ -262,7 +295,7 @@ front-end/
         └── tickets/                # Componentes do domínio
             ├── TicketFilters       # Busca + filtros + botão criar
             ├── TicketList          # Lista + estados (loading, vazio, erro)
-            ├── TicketRow           # Linha com select de status inline
+            ├── TicketRow           # Linha com status e delete inline
             ├── TicketDetail        # Painel de detalhes
             ├── CreateTicketModal   # Modal de criação com validação
             └── ErrorBanner         # Banner de erro com retry
@@ -274,16 +307,15 @@ front-end/
 back-end/
 ├── tsconfig.json
 ├── package.json
-├── data/
-│   └── tickets.db                  # Criado automaticamente na 1ª execução
+├── .env                            # DATABASE_URL, FRONTEND_URL, PORT
 └── src/
-    ├── server.ts                   # Express, middlewares, porta 3000
+    ├── server.ts                   # Express, middlewares, inicializa DB
     ├── types/
     │   └── index.ts                # Ticket, TicketStatus, TicketPriority…
     ├── db/
-    │   └── database.ts             # Conexão SQLite, migration, seed, helpers
+    │   └── database.ts             # Pool PostgreSQL, migration, seed, helpers
     ├── routes/
-    │   └── tickets.ts              # GET, POST, PATCH
+    │   └── tickets.ts              # GET, POST, PATCH, DELETE
     ├── controllers/
     │   └── ticketsController.ts    # Validação, lógica, queries SQL
     └── middlewares/
@@ -294,18 +326,23 @@ back-end/
 
 ## 🏗 Arquitetura
 
-### Camada de dados isolada
+### Camada de dados isolada no frontend
 
-O `ticketService.ts` é a única parte do frontend que sabe de onde os dados vêm.
-Componentes e hooks consomem sempre a mesma interface:
+O `ticketService.ts` é a única parte do frontend que conhece a origem dos dados. Todos os componentes consomem sempre a mesma interface:
 
 ```ts
 ticketService.getAll()
 ticketService.create(payload)
 ticketService.updateStatus(id, status)
+ticketService.delete(id)
 ```
 
-Para trocar mock por API real, apenas o `ticketService.ts` muda — nenhum componente é afetado.
+Internamente seleciona o adapter correto com base na variável de ambiente:
+
+```
+VITE_API_URL definida  →  apiAdapter  →  fetch() → Express → PostgreSQL
+VITE_API_URL ausente   →  mockAdapter →  dados em memória
+```
 
 ### Fluxo de dados
 
@@ -317,16 +354,16 @@ useTickets (hook)
 ticketService
       ↕
   mockAdapter            apiAdapter
-  (in-memory)            fetch() → Express → SQLite
+  (in-memory)            fetch() → Express → PostgreSQL
 ```
 
 ### Separação de camadas no backend
 
 ```
-server.ts       →  Express, middlewares globais, start
+server.ts       →  Express, middlewares, inicializa DB antes de subir o servidor
 routes/         →  define endpoints, delega para controllers
-controllers/    →  validação, lógica de negócio, queries SQL
-db/             →  conexão singleton, migration, seed, helpers tipados
+controllers/    →  validação de input, lógica de negócio, queries SQL ($1, $2…)
+db/             →  pool de conexão singleton, migration, seed, helpers tipados
 middlewares/    →  errorHandler global, 404
 ```
 
@@ -341,12 +378,13 @@ middlewares/    →  errorHandler global, 404
 | Busca por texto | Título ou nome do cliente em tempo real |
 | Criar chamado | Modal com validação dos campos obrigatórios |
 | Atualizar status | Select inline por linha, persiste imediatamente |
+| Deletar chamado | Botão na linha com confirmação, remove permanentemente |
 | Painel de detalhes | Expande ao clicar em uma linha |
 | Loading | Spinner animado durante requisições |
 | Estado vazio | Mensagem contextual (sem dados vs. sem resultados) |
 | Estado de erro | Banner com mensagem amigável + retry |
 | Responsividade | Desktop: tabela · Mobile: cards empilhados |
-| Toasts | Feedback ao criar chamado e alterar status |
+| Toasts | Feedback ao criar, atualizar e deletar chamados |
 | Acessibilidade | `aria-label`, `role`, `aria-live`, navegação por teclado |
 
 ---
@@ -356,10 +394,40 @@ middlewares/    →  errorHandler global, 404
 | Tecnologia | Por quê |
 |---|---|
 | **React 18** | Requisito do desafio. Hooks modernos, sem class components |
-| **Vite** | Build rápido, HMR nativo, suporte TypeScript sem configuração extra |
+| **Vite** | Build rápido, HMR nativo, TypeScript out-of-the-box |
 | **TypeScript** | Tipagem estrita em todo o projeto — frontend e backend |
-| **CSS Modules** | Escopo local por componente, zero runtime, sem dependências de estilo |
-| **IBM Plex Mono + Sans** | Estética industrial adequada a um painel interno de suporte |
+| **CSS Modules** | Escopo local, zero runtime, sem dependências de estilo |
+| **IBM Plex Mono + Sans** | Estética industrial adequada a painel interno de suporte |
 | **Express** | Minimalista, maduro, ótima tipagem com `@types/express` |
-| **sql.js** | SQLite em WebAssembly — sem compilação nativa, funciona em qualquer OS |
-| **tsx** | Executa TypeScript diretamente no dev, sem step de build intermediário |
+| **PostgreSQL + pg** | Banco relacional robusto, persistência real em produção |
+| **tsx** | Executa TypeScript diretamente no dev, sem build intermediário |
+
+---
+
+## 🚀 Deploy
+
+| Serviço | Plataforma | URL |
+|---|---|---|
+| Frontend | Vercel | https://support-panel-sigma.vercel.app |
+| Backend | Render | https://support-panel-m470.onrender.com |
+| Banco de dados | Render PostgreSQL | interno |
+
+### Variáveis em produção
+
+**Render (backend):**
+
+| Key | Valor |
+|---|---|
+| `DATABASE_URL` | Internal Database URL do PostgreSQL no Render |
+| `FRONTEND_URL` | URL do frontend no Vercel |
+| `NODE_ENV` | `production` |
+
+**Vercel (frontend):**
+
+| Key | Valor |
+|---|---|
+| `VITE_API_URL` | URL do backend no Render |
+
+### Deploy automático
+
+Ambas as plataformas fazem deploy automático a cada `git push` na branch `main`.
