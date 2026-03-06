@@ -12,8 +12,8 @@ console.log('Modo:', import.meta.env.VITE_API_URL ?? 'mock');
 // Sem a variável, o app roda em modo mock automaticamente.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const API_URL = 'http://localhost:3000';
-const USE_API = true;
+const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+const USE_API = Boolean(API_URL);
 
 // ── Mock store (in-memory) ────────────────────────────────────────────────────
 let store: Ticket[] = [...mockTickets];
