@@ -1,6 +1,6 @@
 .row {
   display: grid;
-  grid-template-columns: 60px 1fr 180px 130px 100px 145px 155px;
+  grid-template-columns: 60px 1fr 180px 130px 100px 145px 155px 48px;
   gap: 0;
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
@@ -96,7 +96,7 @@
 
 .deleteBtn {
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: var(--text-dim);
   padding: 5px 7px;
@@ -104,6 +104,7 @@
   transition: all 0.15s;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .deleteBtn:hover:not(:disabled) {
