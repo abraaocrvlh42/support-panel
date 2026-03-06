@@ -9,19 +9,12 @@ interface TicketListProps {
   selectedId: string | null;
   onSelect: (ticket: Ticket) => void;
   onStatusChange: (id: string, status: TicketStatus) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
-export function TicketList({
-  tickets,
-  loading,
-  hasActiveFilters,
-  selectedId,
-  onSelect,
-  onStatusChange,
-}: TicketListProps) {
+export function TicketList({ tickets, loading, hasActiveFilters, selectedId, onSelect, onStatusChange, onDelete }: TicketListProps) {
   return (
     <div className={styles.wrap}>
-      {/* Table header — hidden on mobile via CSS */}
       <div className={styles.tableHeader} aria-hidden="true">
         <div className={styles.th}>ID</div>
         <div className={styles.th}>Título</div>
@@ -30,16 +23,15 @@ export function TicketList({
         <div className={styles.th}>Prioridade</div>
         <div className={styles.th}>Alterar status</div>
         <div className={styles.th}>Criado em</div>
+        <div className={styles.th}></div>
       </div>
 
-      {/* States */}
       {loading && <LoadingState />}
 
       {!loading && tickets.length === 0 && (
         <EmptyState hasFilters={hasActiveFilters} />
       )}
 
-      {/* Rows */}
       {!loading && tickets.map((ticket) => (
         <TicketRow
           key={ticket.id}
@@ -47,6 +39,7 @@ export function TicketList({
           isSelected={selectedId === ticket.id}
           onSelect={onSelect}
           onStatusChange={onStatusChange}
+          onDelete={onDelete}
         />
       ))}
     </div>
@@ -72,9 +65,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
         {hasFilters ? 'Nenhum resultado encontrado' : 'Nenhum chamado ainda'}
       </p>
       <p className={styles.stateDesc}>
-        {hasFilters
-          ? 'Tente ajustar os filtros ou a busca.'
-          : 'Crie o primeiro chamado usando o botão acima.'}
+        {hasFilters ? 'Tente ajustar os filtros ou a busca.' : 'Crie o primeiro chamado usando o botão acima.'}
       </p>
     </div>
   );

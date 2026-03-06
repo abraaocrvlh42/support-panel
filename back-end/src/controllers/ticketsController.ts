@@ -87,3 +87,26 @@ export async function updateStatus(
     res.status(500).json({ error: 'Erro ao atualizar status.', detail: (err as Error).message });
   }
 }
+
+// ── DELETE /tickets/:id ───────────────────────────────────────────────────────
+export async function remove(
+  req: Request<{ id: string }>,
+  res: Response,
+): Promise<void> {
+  const { id } = req.params;
+
+  try {
+    const db     = await getDb();
+    const exists = dbGet<Ticket>(db, 'SELECT id FROM tickets WHERE id = ?', [id]);
+
+    if (!exists) {
+      res.status(404).json({ error: `Chamado #${id} não encontrado.` });
+      return;
+    }
+
+    dbRun(db, 'DELETE FROM tickets WHERE id = ?', [id]);
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar chamado.', detail: (err as Error).message });
+  }
+}
