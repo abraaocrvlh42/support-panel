@@ -1,55 +1,30 @@
-import path from 'path';
-import fs   from 'fs';
-import initSqlJs, { Database, SqlValue } from 'sql.js';
+import { Pool } from 'pg';
 
-const DB_PATH = path.join(__dirname, '../../data/tickets.db');
+// Conexão com PostgreSQL via variável de ambiente DATABASE_URL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-// Singleton — uma única conexão para toda a vida do processo
-let _db: Database | null = null;
-
-// Estende o tipo Database com o método save que vamos injetar
-interface AppDatabase extends Database {
-  save: () => void;
-}
-
-export async function getDb(): Promise<AppDatabase> {
-  if (_db) return _db as AppDatabase;
-
-  const SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    _db = new SQL.Database(buffer);
-  } else {
-    _db = new SQL.Database();
-  }
-
-  // Injeta método save para persistir no disco após escritas
-  (_db as AppDatabase).save = function () {
-    const data   = this.export();
-    const buffer = Buffer.from(data);
-    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    fs.writeFileSync(DB_PATH, buffer);
-  };
-
-  // ── Migration ──────────────────────────────────────────────────────────────
-  _db.run(`
+// ── Migration ──────────────────────────────────────────────────────────────
+export async function initDb(): Promise<void> {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS tickets (
-      id          TEXT PRIMARY KEY,
-      title       TEXT NOT NULL,
-      client      TEXT NOT NULL,
-      description TEXT NOT NULL,
-      status      TEXT NOT NULL DEFAULT 'open'
-                  CHECK(status   IN ('open', 'in_progress', 'resolved')),
-      priority    TEXT NOT NULL DEFAULT 'medium'
-                  CHECK(priority IN ('low', 'medium', 'high')),
-      created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+      id          TEXT        PRIMARY KEY,
+      title       TEXT        NOT NULL,
+      client      TEXT        NOT NULL,
+      description TEXT        NOT NULL,
+      status      TEXT        NOT NULL DEFAULT 'open'
+                              CHECK(status   IN ('open', 'in_progress', 'resolved')),
+      priority    TEXT        NOT NULL DEFAULT 'medium'
+                              CHECK(priority IN ('low', 'medium', 'high')),
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
 
-  // ── Seed ───────────────────────────────────────────────────────────────────
-  const result = _db.exec('SELECT COUNT(*) AS total FROM tickets');
-  const total  = result[0]?.values[0][0] as number ?? 0;
+  // Seed — só insere se a tabela estiver vazia
+  const { rows } = await pool.query('SELECT COUNT(*) AS total FROM tickets');
+  const total = parseInt(rows[0].total, 10);
 
   if (total === 0) {
     const seeds = [
@@ -62,39 +37,30 @@ export async function getDb(): Promise<AppDatabase> {
     ];
 
     for (const s of seeds) {
-      _db.run(
-        'INSERT INTO tickets (id, title, client, description, status, priority, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      await pool.query(
+        `INSERT INTO tickets (id, title, client, description, status, priority, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [s.id, s.title, s.client, s.description, s.status, s.priority, s.created_at],
       );
     }
 
-    (_db as AppDatabase).save();
     console.log('✅ Banco populado com dados iniciais.');
   }
 
-  console.log(`💾 SQLite pronto → ${DB_PATH}`);
-  return _db as AppDatabase;
+  console.log('🐘 PostgreSQL pronto.');
 }
 
-// ── Typed query helpers ────────────────────────────────────────────────────────
-
-/** Executa SELECT e retorna array de objetos tipados. */
-export function dbAll<T>(db: Database, sql: string, params: SqlValue[] = []): T[] {
-  const result = db.exec(sql, params);
-  if (!result.length) return [];
-  const { columns, values } = result[0];
-  return values.map((row) =>
-    Object.fromEntries(columns.map((col, i) => [col, row[i]])) as T,
-  );
+// ── Query helpers ──────────────────────────────────────────────────────────
+export async function dbAll<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const { rows } = await pool.query(sql, params);
+  return rows as T[];
 }
 
-/** Executa SELECT e retorna apenas o primeiro resultado. */
-export function dbGet<T>(db: Database, sql: string, params: SqlValue[] = []): T | null {
-  return dbAll<T>(db, sql, params)[0] ?? null;
+export async function dbGet<T>(sql: string, params: unknown[] = []): Promise<T | null> {
+  const rows = await dbAll<T>(sql, params);
+  return rows[0] ?? null;
 }
 
-/** Executa INSERT / UPDATE / DELETE e persiste no disco. */
-export function dbRun(db: AppDatabase, sql: string, params: SqlValue[] = []): void {
-  db.run(sql, params);
-  db.save();
+export async function dbRun(sql: string, params: unknown[] = []): Promise<void> {
+  await pool.query(sql, params);
 }

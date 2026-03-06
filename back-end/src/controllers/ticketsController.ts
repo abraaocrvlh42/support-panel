@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { getDb, dbAll, dbGet, dbRun } from '../db/database';
+import { dbAll, dbGet, dbRun } from '../db/database';
 import { Ticket, CreateTicketBody, UpdateStatusBody, TicketStatus, TicketPriority } from '../types';
 
 const VALID_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high'];
 const VALID_STATUSES:   TicketStatus[]   = ['open', 'in_progress', 'resolved'];
 
 const SELECT_TICKET = `
-  SELECT id, title, client, description, status, priority, created_at AS createdAt
+  SELECT id, title, client, description, status, priority, created_at AS "createdAt"
   FROM tickets
 `;
 
@@ -17,8 +17,7 @@ function generateId(): string {
 // ── GET /tickets ──────────────────────────────────────────────────────────────
 export async function getAll(_req: Request, res: Response): Promise<void> {
   try {
-    const db      = await getDb();
-    const tickets = dbAll<Ticket>(db, `${SELECT_TICKET} ORDER BY created_at DESC`);
+    const tickets = await dbAll<Ticket>(`${SELECT_TICKET} ORDER BY created_at DESC`);
     res.json(tickets);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar chamados.', detail: (err as Error).message });
@@ -29,12 +28,11 @@ export async function getAll(_req: Request, res: Response): Promise<void> {
 export async function create(req: Request<object, object, CreateTicketBody>, res: Response): Promise<void> {
   const { title, client, description, priority } = req.body;
 
-  // Validação
   const errors: Partial<Record<keyof CreateTicketBody, string>> = {};
-  if (!title?.trim())                         errors.title       = 'Título é obrigatório.';
-  if (!client?.trim())                        errors.client      = 'Cliente é obrigatório.';
-  if (!description?.trim())                   errors.description = 'Descrição é obrigatória.';
-  if (!VALID_PRIORITIES.includes(priority))   errors.priority    = 'Prioridade inválida. Use: low, medium ou high.';
+  if (!title?.trim())                       errors.title       = 'Título é obrigatório.';
+  if (!client?.trim())                      errors.client      = 'Cliente é obrigatório.';
+  if (!description?.trim())                 errors.description = 'Descrição é obrigatória.';
+  if (!VALID_PRIORITIES.includes(priority)) errors.priority    = 'Prioridade inválida.';
 
   if (Object.keys(errors).length > 0) {
     res.status(400).json({ error: 'Dados inválidos.', fields: errors });
@@ -42,15 +40,15 @@ export async function create(req: Request<object, object, CreateTicketBody>, res
   }
 
   try {
-    const db = await getDb();
     const id = generateId();
 
-    dbRun(db,
-      'INSERT INTO tickets (id, title, client, description, priority) VALUES (?, ?, ?, ?, ?)',
+    await dbRun(
+      `INSERT INTO tickets (id, title, client, description, priority)
+       VALUES ($1, $2, $3, $4, $5)`,
       [id, title.trim(), client.trim(), description.trim(), priority],
     );
 
-    const created = dbGet<Ticket>(db, `${SELECT_TICKET} WHERE id = ?`, [id]);
+    const created = await dbGet<Ticket>(`${SELECT_TICKET} WHERE id = $1`, [id]);
     res.status(201).json(created);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar chamado.', detail: (err as Error).message });
@@ -66,22 +64,20 @@ export async function updateStatus(
   const { status } = req.body;
 
   if (!VALID_STATUSES.includes(status)) {
-    res.status(400).json({ error: 'Status inválido.', detail: 'Use: open, in_progress ou resolved.' });
+    res.status(400).json({ error: 'Status inválido.' });
     return;
   }
 
   try {
-    const db     = await getDb();
-    const exists = dbGet<Ticket>(db, 'SELECT id FROM tickets WHERE id = ?', [id]);
-
+    const exists = await dbGet<Ticket>('SELECT id FROM tickets WHERE id = $1', [id]);
     if (!exists) {
       res.status(404).json({ error: `Chamado #${id} não encontrado.` });
       return;
     }
 
-    dbRun(db, 'UPDATE tickets SET status = ? WHERE id = ?', [status, id]);
+    await dbRun('UPDATE tickets SET status = $1 WHERE id = $2', [status, id]);
 
-    const updated = dbGet<Ticket>(db, `${SELECT_TICKET} WHERE id = ?`, [id]);
+    const updated = await dbGet<Ticket>(`${SELECT_TICKET} WHERE id = $1`, [id]);
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar status.', detail: (err as Error).message });
@@ -96,15 +92,13 @@ export async function remove(
   const { id } = req.params;
 
   try {
-    const db     = await getDb();
-    const exists = dbGet<Ticket>(db, 'SELECT id FROM tickets WHERE id = ?', [id]);
-
+    const exists = await dbGet<Ticket>('SELECT id FROM tickets WHERE id = $1', [id]);
     if (!exists) {
       res.status(404).json({ error: `Chamado #${id} não encontrado.` });
       return;
     }
 
-    dbRun(db, 'DELETE FROM tickets WHERE id = ?', [id]);
+    await dbRun('DELETE FROM tickets WHERE id = $1', [id]);
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: 'Erro ao deletar chamado.', detail: (err as Error).message });
